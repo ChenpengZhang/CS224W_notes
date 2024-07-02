@@ -113,3 +113,58 @@ Or: Add a virtual node and connect it to every node in the graph.
 3. Augment big/dense graphs: Randomly sample a node's neighborhood for message passing. But we may loose some expressive power of the node.
 The roll of random neighbors can be refreshed everylayer to improve robustness. 
 Or: we can choose to aggregate the "top 100 important" neighbors. 
+### Graph Training
+* The GNN Training Pipeline: ![alt text](image-10.png)
+* In the prediction head we can have node/edge/graph level tasks
+1. For node-level prediction, we can make the prediction using the node embedding. 
+$$h_v^{(l)}\in \mathbb R^d$$
+$$\hat y_v=Head_{node}(h_v^{(l)})=W^{(H)}h_v^{(l)}, \hat y_v\in \mathbb R^k$$
+As we can see, we directly use a dimentional reduction matrix W to do the classification work.
+2. For edge-level prediction, we can define a function of taking in two nodes and output a confidence that if there is actually a link between it. 
+$$\hat y_{uv}=Head_{edge}(h_u^{(l)}, h_v^{(l)})$$
+An option for $Head$ might be concatenating the two embeddings together and apply some linear function to the 2d-dimentional embedding. 
+Or: You may use simply a dot product of these two embeddings. 
+Or: k-way prediction 
+![alt text](image-11.png) 
+3. For graph-level predction, we can imagine that we should construct a function that takes in every embedding information in the graph and output some kind of classification cofidence vector. 
+$$\hat y_G=Head_{graph}(\forall_{(v\ in\ G)} h_v^{(l)}\in \mathbb R^d)$$ 
+Options are: global mean pooling, global max pooling, global sum pooling, hierarchical global pooling
+* Supervised learning has some true labels, whilst unsupervised learning does not. Note that unsupervised learning still use the true value when calculating the loss function and back-propogating, but does not use any true value in the forward process.
+* A example of unsupervised learning may be "train a GNN to predict node clustering coefficient" "hide the edge between two nodes, predict if there should be a link" "predict if two graphs are isomorphic".
+* Loss function: It is important to differentiate whether the task is classification or regression.
+1. Classification Loss: 
+   * Cross entropy (CE): 
+   * $$CE(y^{(i)}, \hat{y}^{(i)})=-\sum_{j=1}^K y_j^{(i)}log(\hat y_j^{(i)})$$ 
+   * This means that we only care about how close the correct category is from the predicted value, for example the target might be [0, 0, 1, 0, 0], and what we predicted is [0.1, 0.3, 0.4, 0.1, 0.1], then we can see that the result is $-1\cdot log(0.4)$
+2. Regression Loss:
+   * Mean squared error (MSE):
+   * $$MSE(y^{(i)}, \hat{y}^{(i)})=-\sum_{j=1}^K (y_j^{(i)}-\hat y_j^{(i)})^2$$
+   * Trivial
+3. Evaluation Metrics (Regression):
+   * RMSE, MAE (Mean absolute error)
+4. Evaluation Metrics (Classification):
+   * Simply use accuracy
+   * But if your classes are imbalanced, for example having 99% of the data is cat1, the model will get a high accuracy by just predicting all nodes are cat1. Thus we need a new model.
+   * ![alt text](image-12.png)
+   * The concept of a ROC Curve:
+   * ![alt text](image-13.png) 
+   * You can imagine the perfect prediction should be on the top left, so the bigger the area under the curve is, the better the performance the classifier is.
+   * But how about multiple-class classifier?
+## Setting up a GNN
+* Fixed split into 3 Datasets: 
+1. Training set
+    Used for optimizing GNN parameters, like calculating loss.
+2. Validation set
+    To investigate how well the model is doing when setting up the model, to make changes to the hyperparameters.
+3. Test set
+    To test final performance of the model on completely unseen data.
+* But splitting data in a graph is a problem.
+* The method of splitting data: 1. compute the embedding using the entire graph 2. we break the edges between the splits.
+* 1 will cause some leakage of graph linkage information, 2 will cause some link information to be lost. 1 is called transductive setting, 2 is called inductive setting.
+* In graph classification, only inductive setting is well defined. 
+* Link prediction: predict missing edges
+* Concretely, we need to hide some edges from the GNN to let it predict it. For link prediction, we will split the edges twice.
+  1. We will assign two types of edges in the original graph (message edges, supervision edges), after this step, the supervision edges (edges to predict) will not be used by GNN
+  2. Then we further split the edges into train/validation/test. Each ofcourse contains its own message and supervision edges. So that is a total number of 2*3=6 sets of edges. ![alt text](image-14.png)![alt text](image-15.png)
+  Note the training process of transductive and inductive is different, with one randomly taking out edges from the original graph, the other taking out edges step by step.
+# GNN Mastery
