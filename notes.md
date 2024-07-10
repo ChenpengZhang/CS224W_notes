@@ -168,3 +168,177 @@ Options are: global mean pooling, global max pooling, global sum pooling, hierar
   2. Then we further split the edges into train/validation/test. Each ofcourse contains its own message and supervision edges. So that is a total number of 2*3=6 sets of edges. ![alt text](image-14.png)![alt text](image-15.png)
   Note the training process of transductive and inductive is different, with one randomly taking out edges from the original graph, the other taking out edges step by step.
 # GNN Mastery
+## Designing the Most Powerful GNN
+* local neighborhood structures
+* Can GNN node embeddings distinguish different node's local neighborhood structures?
+* A computational graph: how the mode's information is passed through the graph.
+* ![alt text](image-16.png)
+* Most expressive GNN maps different rooted subtrees into different node embeddings.
+* Recall: we call f a injective function if for every x in the input, it corresponds to a different y.
+* If each step of GNN's agregation is a injective function, the GNN is most expressive.
+* HOW?
+* Observation: Neighbor aggregation can be abstracted as a function over a multi-set. (several nodes and their corresponding feature vector)
+* GCN: GCN is a mean pooling, thus cannot distinguish between multi-sets with the same color propotion.
+* GraphSAGE: GraphSAGE is a max pooling, thus cannot distinguish different multi-sets with the same set of distinct colors.
+* Thus, GCN and GraphSAGE are not the most expressive GNNs.
+* Math: Theorem: Any injective multi-set function can be expressed as: $\Phi (\sum _{x\in S} f(x))$
+* How to model $\Phi$ and $f$ in the formula?
+* We use a multi-layer perceptron. It is proved that 1-hidden layer MLP can learn any function if its dimention is big enough.
+* $MLP_{\Phi}(\sum_{x \in S}MLP_{f}(x))$, in practice, a dimension of 100-500 is enough.
+* This is called GIN.
+* Before we talk about the full model of GIN, we relate back to the WL graph kernel.
+* WL graph kernel: ![alt text](image-17.png)
+* The complete GIN model: 
+$$GINConv(c^{k}(v), (c^{(k)}(u))_{u \in N(v)}) = MLP_{\Phi}((1+\epsilon)\cdot c^{(k)}(v)+\sum _{u\in N(v)}c^{(k)}(u))$$
+where $\epsilon$ is a learnable parameter.
+* Other method to improve the expressive power of a GNN: 1. add more information on a node so the nodes are also distingushable 2. Improve the computational graph structure
+## Label Propagation
+* Main question: Given a network with labels on some nodes, how do we assign labels to all other nodes in the network?
+* Given labels of some nodes, let's predict labels of unlabeled nodes. This is called transductive node classification. (we only want to predict labels on this specific graph)
+* The intuition is: correlations exist in networks.
+* Homophily: The tendency of individuals to associate and bond with similar others.
+* Social influence: Social connections can influence the individual characteristics of a person.
+1. Label propagation
+   * See "Relational classification" above
+   * applications: Document classification, tweet classification
+   * Limitations: converge slow, doesn't use label features.
+2. Correct & Smooth
+   * We observed that <b> GNN uses labels to train the weights of a model, but given a trained model, predictions for different node are independent/uncorrelated!</b> But in label propagation, the labels are used directly.
+   * Uncorrelated GNN predictions can be catastrophic in simple cases when features are only mildly predictive. (I believe this is the problem that I encountered)![alt text](image-18.png)
+   In the picture, since the nodes are asymmetric around 0 degree and have similar structures, the network would always want to give the average prediction which is wrong. 
+   In this case, label propagation will preform better than GNN.
+   * The steps:
+      1. Train a base predictor that predict soft labels over all nodes. The base predictor can be simple, like a linear model/MLP over node features, or a full GNN.
+      2. Given a trianed base predictor, we apply it to obtain soft labels for all the nodes.
+      3. Correct: The key idea is that we expect errors in the base prediction to be positively correlated along edges in the graph. If the error of a guy is huge, we will expect that the error will similarly appear in its neighbors.![alt text](image-19.png)
+      ![alt text](image-20.png)
+      $$\widetilde{A} \equiv D^{-1/2}AD^{-1/2}$$
+      SMOOTH OPERATOR ~~~: After the correction step, we get the label $Z^{(0)}$. Then we diffuse $Z^{(0)}$ through the entire graph.
+      * Question: Correct and Smooth for the non-classification problem?
+3. Masked label prediction
+   * treat the labels directly as features.
+   * But you can't use the labels to predict the labels itself. ![alt text](image-21.png)
+## Heterogeneous Graphs
+* Different types of nodes: Authors and papers
+* Different types of edges: Likes and cites
+* Relation types: (node_start, edge, node_end) -> 8 relation types in the example above.
+* Definition: $G = (V, R, T, E)$, $T$ is the node type, $E$ is the edge type, $R$ is the relation type.
+* Approach 1: treat types of nodes and edges as features, such as a "one hot encoding".
+* But this approach cannot solve the problem of having different feature dimensions.
+### RGCN
+* Use different neural weights for different relation types.
+* Introduce a set of neural networks for each relation type. (or weight matrix?)
+* ![alt text](image-22.png)
+* However, each relation would have L matrices: $W_r^{(1)}, W_r^{(2)}...W_r^{(L)}$, which in all have a dimension of $l^2\times L\times R$, so as the numbers of relations grow, the number of parameters grow rapidly.
+1. Block diagonal marices: make the weights sparse.
+2. Basis learning: Share weights across different relations: $W_r = \sum ^B_{b=1}a_{rb}\cdot V_b$, where $V_b$ is shared across all relations. Here one $a_{rb}$ is juat a scalar.
+* Link prediction for heterogeneous graph: skip
+## Heterogeneous Graph Transformer
+* RGAT: does not quite understand...
+## Knowledge Graph Embeddings
+* Edges in KG are represented as triples (h, r, t), head has relation with tail.
+* Key idea: model entities and relations in the embedding/vector space $\mathbb R^d$ (shallow embedding)
+* Given a true triple (h, r, t), the goal is that the true embedding of (h, r) should be close to the embedding of t.
+### TransE
+* $h + r = t$ if the given fact is true, else opposite.
+* scoring function $f_r(h, t) = -||h+r-t||$
+* Example: Obama + Nationality = American
+* Four relation patterns: 
+  1. Symmertric: roommate
+  2. Inverse: (Advisor, Advisee)
+  3. Composition (Transitive): My mother's husband is my father
+  4. 1-to-N: many tails (students) are students of a head (teacher).
+### TransR
+### DistMult
+### ComplEx
+## Reasoning in KG
+* Predictive queries in KG: one-hop queries, path queries, conjunctive queries.
+* one-hop query: is t an answer to query (h, r)?
+* path query: v -> r1 -> r2 -> ... -> rn -> V?
+* Problem of KG: KGs are notoriously incomplete.
+* Predictive queries: predict what entities are the answer to the query.
+## Answering predictive queries in KGs
+* Key idea: embed queries to query point $q$
+* $q=h+r$, query embedding $q$ is close to the answer embedding $t$.
+* TransE can handle composition relations, whilst others can't.
+* Conjunctive queries: "and" "what are the drugs that cause short of breath and treat diseases associated with protein ESR2?": ![alt text](image-26.png)
+## Query2box
+* How to define the intersection operator in the embedding space?
+* Box bmbedding: embed queries with hyper-rectangles.
+* This is because intersection of boxes is well defined.
+* Projection Operator $\mathcal{P}$: $Box \times Relation \rightarrow Box$, it move and expand a specific box.
+* Intersection Operator $\mathcal{J}$
+* ![alt text](image-27.png)
+* ![alt text](image-28.png)
+* Define entity-to-box distance: ![alt text](image-29.png)
+* How do we handle union operators? (OR)
+* It is observed that we cannot union too much quries in a low dimensional space, since there will be some points in the middle of all points that is not required in the union. You cannot exclude it, thus making the embedding fail.
+* This conclues that the dimension of the embedding space has to be bigger than the number of entities.
+* And we push the union process to the very last step.
+* ![alt text](image-30.png) The entity is at least close to one box q.
+* The process of embedding any AND-OR query q: ![alt text](image-31.png)
+## Training a Query2box
+* Parameters to learn: Entity embeddings, relation embeddings, intersection operators.
+* Training process: ![alt text](image-32.png) The negative sample has the type of the answer, e.g. American, German. 
+* An example
+## Fast Nerual Subgraph Matching & Counting
+* Subgraphs are the building blocks of networks.
+* Node induced subgraph: Take a subset of the node and all the edges are induced by the nodes.
+* Edge induced subgraph: Take a subset of the edges and all the corresponding nodes.
+* Graph Isomorphism: ![alt text](image-33.png)
+* Subgraph Isomorphism: $G_2$ is subgraph-isomorphic to $G_1$ if some subgraph of $G_2$ is isomorphic to $G_1$. This problem is NP-hard. 
+* Network Motifs: "recurring, significant patterns of interconnections." 
+* Pattern: small (node-induced) subgraph
+* Recurring: Found how many times, i.e. frequency
+* Significant: more frequent than expected
+* Node-anchored subgraph: also finding subgraph, but we only care about different positions of a given node, not all the node in the subgraph.
+* Now, let's define motif significance, the idea is that subgraph that occur in a real network much more often than a random network have functional significance. 
+* But how do we generate random graphs? ER random graphs/Configuration model. 
+* Z-score: ![alt text](image-34.png)
+* A very interesting use in practice: ![alt text](image-35.png)
+## Neural Subgraph Matching
+* How to decide whether a query graph is a subgraph in the target graph? 
+* Given a input graph, decompose it into neighborhoods, and then do the query. 
+* ![alt text](image-36.png)
+* But how we decompose the original graph $G_T$ into heighborhoods? 
+* For each node in $G_T$, obtain a k-hop heighborhood around the anchor. This can be performed using BFS. Depth $k$ is a hyper-parameter. Then we embed the anchor node. 
+* Order embedding space: ![alt text](image-37.png)
+* Lower-left has the same structure of subgraph and hypergraph. Subgraph isomorphism relationship can be nicely encoded in order embedding space. 
+* So now the goal is to learn a GNN to preserve the embedding structure. How do we design the loss function then? 
+* Order constraint: specifies the ideal order embedding property that refects subgraph relationships. 
+* ![alt text](image-38.png)
+  Here, $G_q$ is actually a subgraph of $G_t$. As we can see in the picture, if in the embedding space we correctly embeded them, $E(G_q, G_t)=0$, else we will receive a error number. 
+* To learn such embeddings, we construct training examples $(G_q, G_t)$ where half the time $G_q$ is a subset of $G_t$. For positive examples we use the loss function above. For negative examples we use $E' = max(0, \alpha - E(G_q, G_t))$.
+* We can use BFS to construct positive examples and corrupt the example's edges to get negative examples. The BFS depth is often 3-5.
+* How to predict: ![alt text](image-39.png)
+## Finding Frequent Subgraphs
+* Generally, finding the most frequent size-k subgraphs requires two major challenges:
+1. Enumerating all size-k connected subgraphs;
+2. Counting #(occurence of each subgraph type).
+* This is more like a exhaustive enumerating approach, which is almost obviously computationally hard.
+* Solution: Representation learning.
+1. In counting occurences of each subgraph type, the solution is to use GNN to predict the frequency of the subgraph. 
+2. In enumerating all size-k connected subgraphs, the solution is to construct a size-k subgraph incrementally. 
+* SPMiner: ![alt text](image-40.png)
+* ![alt text](image-41.png)
+* We just count how much points fall on the top right of the given sub-structure. 
+* Start with an individual node, grow motif by iteratively choosing a neighbor in $G_T$ of a node in $S$(the motif) and add that node to $S$. 
+* Choose the growing node greedyly: maximize the number of neighborhoods in the "top right" area after k step. 
+* Total violation is defined as the number of neighborhoods that do not contain $Q$. Violation + Frequency = Constant. 
+* SPMiner is fast and accurate in both small and large graphs. 
+## Community Detection in Networks
+* Problem: How does information "flow" through the social network? 
+* An interesting observation: contacts finding jobs were often acquaintances rather than close friends. 
+* Structually embedded edges (strong edges within a group) are heavily redundant in terms of information access: since if one of the members know a information, it is very likely that all in the group would know. We don't need that much edges to represent. 
+* Triadic closure: ![alt text](image-42.png)
+* Revision Time:
+* Parameter: Modularity $Q$: A measure how well a network is partitioned into communities. 
+* $Q \propto \sum _{s\in S}[\# edges\ in\ group\ s-expected(random)\ \# edges\ within\ group\ s]$, the second is determined by a random graph model.
+* Calculation: ![alt text](image-43.png)
+  Here $\frac{k_i k_j}{2m}$ stands for the average edges between i and j if given a random graph.
+## Louvain Algorithm
+* Omitted, will watch if needed
+## Detecting Overlapping Communities
+* Omitted, will watch if needed
+## Recommender Systems
+* 
