@@ -341,4 +341,34 @@ where $\epsilon$ is a learnable parameter.
 ## Detecting Overlapping Communities
 * Omitted, will watch if needed
 ## Recommender Systems
-* 
+* Recommender system can be naturally modeled as a bipartite graph. 
+* Recommendation task can be cast as a link prediction problem. 
+* Possible application in GIS: human trajecotory prediction.
+* For $u \in U, v\in V$, we need to get a real-valued score $f(u,v)$.
+* 2-stage process: 1. Candidate generation 2. ranking. 
+* ![alt text](screenshots/image-44.png)
+* Recall@K = $|P_u \cap R_u|/|P_u|$, where $P_u$ is the positive items, $R_u$ is the recommended items. 
+### Embedding for recommender systems
+* Let the user u and the item v have both a D-dimensional embedding, so that the score function is $f_\theta(\cdot,\cdot)$
+* Two surrogate loss functions are widely-used to enable efficient gradient-based optimization: Binary loss, Bayesian Personalized Ranking (BPR) loss. 
+* ![alt text](screenshots/image-45.png)
+* But this penalize the possible positive edges for they may not be ranked higher than the negative edges of another user. 
+* BPR Loss:
+* So now we have positive and negative edges for each user. 
+* ![alt text](screenshots/image-46.png)
+* Why embedding models work? The underlying idea is called collaborative filtering. It recommend items by collecting preferences of many other similar users. The key question is how to capture similarity between users and items?
+* Conventionally we just use the shallow embedding for the embedding. 
+* NGCF: Neural Graph Collaborative Filtering
+* Key idea: Use a GNN to genrerate the embedding for each user and item. 
+* ![alt text](screenshots/image-47.png)
+* LightGCN motivation: The GNN parameters may not be so essential in the modeling. Shallow embedding is expressive enough. 
+* ![alt text](screenshots/image-48.png)
+* ![alt text](screenshots/image-49.png)
+* We just use a single parameter matrix. 
+* Multi-scale Diffusion: 
+* ![alt text](screenshots/image-50.png)
+  We consider the effect of a node of different distance to different weights.
+* The reason why LightGCN works so well is that it encourages the embeddings of similar users/items to be similar through diffusion.
+* PinSAGE: Unifies visual, textual, and graph information.
+* Goal: Generate embeddings for nodes in a large-scale Pinterest graph containing billions of objects.
+* Key idea: Borrow information from nearby nodes.
