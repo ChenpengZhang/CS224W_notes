@@ -371,4 +371,62 @@ where $\epsilon$ is a learnable parameter.
 * The reason why LightGCN works so well is that it encourages the embeddings of similar users/items to be similar through diffusion.
 * PinSAGE: Unifies visual, textual, and graph information.
 * Goal: Generate embeddings for nodes in a large-scale Pinterest graph containing billions of objects.
-* Key idea: Borrow information from nearby nodes.
+* Key idea: Borrow information from nearby nodes. 
+## Deep Generative Problem for Graphs
+* We want to generate realistic graphs using graph generative models.
+* Example: generating roads, formation of cities
+* Goal 1: Realistic graph generation: generate graphs that are similar to a given set of graphs
+* Goal 2: Generate graphs that optimize given objectives/constraints.
+* Idea: approximate $p_{data}(G)$ with $p_{model}(G)$ (Density estimation), then sample from $p_{model}$
+* Key Principle: Maximum likelihood distribution
+   $$\theta^* = argmax (\mathbb E_{x~pdata}log\ p_{model}(x|\theta))$$
+* Then generate the sampling from a random seed and a deep neural network. 
+* Auto-regressive models: ![alt text](screenshots/image-51.png)
+### GraphRNN
+* Define a graph generating sequence $S^\pi$
+* Which is actually the top right part of the adjacency matrix.
+* RNN: Sequentially takes input sequence to update its hidden states.
+* ![alt text](screenshots/image-52.png)
+* GraphRNN has a node-level RNN and a edge-level RNN. The node-level RNN generates the initial state for edge-level RNN. The edge-level RNN sequentially predict if the new node will connect to each of the previous node.
+* ![alt text](screenshots/image-53.png)
+* ![alt text](screenshots/image-54.png)
+* ![alt text](screenshots/image-55.png)
+* Loss: binary cross entropy
+* Minimize: $L = -[y_1^* log(y_1)+(1-y_1^*)log(1-y_1)]$
+* The training process: ![alt text](screenshots/image-56.png)
+* Tractability of the problem: Too many steps for edge generation.
+* BFS Node ordering: rearrange the node orders such that the node that has already been traversed won't exist in the upcoming linking steps. For example, if node 4 doesn't connect to node 1, then all nodes > 4 would not be connected to node 1. 
+* How to define graph similarity: 1. Visual 2. Graph statistics
+* Graph statistics similarity: 1. Earth mover distance (EMD) 2. Maximum mean discrepancy (MMD)
+### GCPN
+* GCPN: GNN + RL (reinforcement learning)
+* Predict links based on node embeddings.
+* ![alt text](screenshots/image-57.png)
+### Summary
+* Possible tasks: 
+  1. Imitating a set of given graphs
+  2. Optimizing graphs towards given goals
+# Advanced Topics on GNN
+## Expressive GNNs
+* Even though two nodes may have the same neighborhood structure, we may want to assign different embeddings to them. 
+## Position-aware GNNs
+* ![alt text](screenshots/image-58.png)
+* Naive solution: one-hot encoding
+* Two types of tasks on graphs: structure-aware tasks, position-aware tasks
+* The "Anchor": randomly pick nodes $s_i$ as the anchor nodes. Represent $v_i$ and via their relative distances w.r.t. the anchor. 
+* Or you can expand the notion to anchor set, which is a set of multiple anchors.
+* Goal: try to embed the nodes into the Euclidean space so that the distance in the space approximates the distance. 
+* ![alt text](screenshots/image-59.png)
+* ![alt text](screenshots/image-60.png)
+* Further clarification on $S_{i, j}$: $i$ stands for the probability of a node being selected, $j$ stands for the times that you random sample on. (This is my personal deduction straight from the paper and the PPT, which may be inconsistent with what the professor said in class. The original word in class was: <i>The first index is the number of anchor sets of a given size, the second index is the size of the anchor set. </i>I found this very confusing. )
+* You can imagine, this process should be permutational variant: if you put the vector straight onto the feature of the node, by changing the order of the sampling set, the output should then change, which is not rigorous. Thus we introduce another special NN to solve the problem. 
+* ![alt text](screenshots/image-61.png)
+## Identity-aware GNNs
+* Failure case: different inputs but the same computational graph.
+* Inductive node coloring: we can assign a color to the node we want to embed.
+* ID-GNN: An ID-GNN applies different message/aggregation to nodes with different colorings. 
+* ![alt text](screenshots/image-62.png)
+* Very similar to RGCN, but now we only care about the source type, but not the relation type. This is faster.
+## Robustness of GNN
+* Direct attack, indirect attack
+* GCN is robust to random noise
