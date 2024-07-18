@@ -430,3 +430,35 @@ where $\epsilon$ is a learnable parameter.
 ## Robustness of GNN
 * Direct attack, indirect attack
 * GCN is robust to random noise
+## Scaling up to Large Graphs
+* Why is big dataset hard? 
+* Standard SGD cannot effectively train GNNs.
+* Full-graph sampling will easilly blow up the memory.
+  1. GraphSAGE Neighbor Sampling
+  * Observation: when generating the embedding of a single node, all we need is the k-hop neighborhood strcuture around the node, and we can ignore the rest of the graph.
+  * So instead of including the whole graph, we sample $M$ <b>computation graphs</b>, and put them into the GPU. 
+  * Then we use the same stocastic gradient descent to only the neighborhoods. 
+  * But this graph will still increase exponeitially with the number of layers. And it will sometimes reach a high-degree node.
+  * Neighbor Sampling: Construct the computational graph by ramdomly sampling at most H neighbors each time.
+  * OR: Random Walk Sampling:
+  * Random walk with restarts: ![alt text](screenshots/image-63.png)
+  2. Cluster-GCN
+  * Sample a subgraph of the large graph and update the node embeddings based on the subgraph. 
+  * Split subgraph based on community strcuture. (Louvain, METIS)
+  * Issues: 1. Removes between-group links 2. Samples only a small portion of the graph 3. Nodes in group are not diverse enough
+  * Advanced Cluster-GCN: Aggregate multiple node groups per mini-batch.
+  3. Simplifying GCN
+# Guest Lectures
+* Last two lectures and we are done! 
+## Geometric Graph Learning
+* Sometimes, we also want to include the 3D information of a molecule into the graph
+* Geometric graph: A geometric graph $G = (A, S, X)$ is a graph where each node is embedded in d-dimensional Eucledian space. A is the adjacency matrix, S is the node feature matrix and X is the node coordinates. 
+* Idea: no matter how the 3D protein twist and reshape, the output embedding should be the same. 
+* Use the GNN to calculate the force of the structure. 
+* Just like when we are solving the building height problem, we naively include the coordinates of a building into the node attribute, but if the place/the city structure changed, we cannot predict it anymore. 
+* Structure x -> energy E: invariant
+* structure x -> force v: equivariant
+* Approach 1: enumerate all "rotation" to force the model to learn.
+* Invariant GNN: SchNet: use distance as edge attributes
+* Improved SchNet: DimeNet
+* Equivariant GNN: PaiNN
