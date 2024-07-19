@@ -462,3 +462,11 @@ where $\epsilon$ is a learnable parameter.
 * Invariant GNN: SchNet: use distance as edge attributes
 * Improved SchNet: DimeNet
 * Equivariant GNN: PaiNN
+## XAI for Graphs
+* Important aspects of turstworth GNNs: Robustness and explainability. 
+* Example explainable model: linear regression, dimension reduction, decision tree
+* Explanations for prediction at node v: 1. important subgraph structure 2. important subset of features
+* Explainability settings: Instance level or model level
+* GNN explainer outputs $(A_S, X_S^F)$, where $A_S$ is the subgraph of the input graph, and $X_S^F$ is the sub node feature matrix of the subgraph. 
+* Mutual information (MI): $$MI(X;Y)=H(X) - H(X|Y) = H(Y) - H(Y|X)$$, where $H(X)$ is the entropy of X, and $H(Y|X)$ is the conditional entropy of Y given X. 
+* The objective is maximize MI between label and explaination: $$maxMI(Y;(A_S,X_S))$$ $$minH(Y|A=A_S, X=X_S^F)$$
